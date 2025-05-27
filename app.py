@@ -48,13 +48,31 @@ for item in st.session_state.history:
         st.markdown(f"**📌 Summary:** {item['output']}")
     st.divider()
 
+# Show full history at the top
+st.subheader("📜 Interaction History")
+for item in st.session_state.history:
+    if item["type"] == "Question":
+        st.markdown(f"**🧑 You asked:** {item['input']}")
+        st.markdown(f"**🤖 AI answered:** {item['output']}")
+    elif item["type"] == "PDF Summary":
+        st.markdown(f"**📄 You uploaded:** {item['input']}")
+        st.markdown(f"**📌 Summary:** {item['output']}")
+    st.divider()
+
 # Tabs for question or PDF upload
 tab1, tab2 = st.tabs(["❓ Ask a Question", "📄 Upload a PDF"])
 
 # --- Question Tab ---
 with tab1:
-    user_query = st.text_input("Enter your question:")
-    if st.button("Submit Question"):
+    if "user_input" not in st.session_state:
+        st.session_state.user_input = ""
+
+    # Create a form so we can clear the input after submit
+    with st.form("question_form", clear_on_submit=True):
+        user_query = st.text_input("Enter your question:", value=st.session_state.user_input, key="input_text")
+        submit_question = st.form_submit_button("Submit Question")
+
+    if submit_question:
         if user_query.strip() != "":
             with st.spinner("Thinking..."):
                 response = ask_together_ai(user_query)
@@ -63,10 +81,14 @@ with tab1:
                     "input": user_query,
                     "output": response
                 })
+
+                # Display latest response
                 st.markdown(f"**🧑 You asked:** {user_query}")
                 st.markdown(f"**🤖 AI answered:** {response}")
                 st.divider()
 
+                # Reset the input
+                st.session_state.user_input = ""
         else:
             st.warning("Please enter a question.")
 
