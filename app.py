@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import fitz  # PyMuPDF
 
+# Get your Together API key from secrets
 TOGETHER_API_KEY = st.secrets["TOGETHER_API_KEY"]
 
 def ask_together_ai(prompt):
@@ -13,7 +14,7 @@ def ask_together_ai(prompt):
     payload = {
         "model": "meta-llama/Llama-3-8b-chat-hf",
         "messages": [
-            {"role": "system", "content": "You are a helpful AI study assistant."},
+            {"role": "system", "content": "You are a helpful AI study assistant. Help the user with summaries, explanations, quiz questions, or any study-related request."},
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.7
@@ -30,21 +31,35 @@ def extract_text_from_pdf(uploaded_file):
         text += page.get_text()
     return text
 
-# --- Streamlit UI ---
+# --- UI ---
 st.set_page_config(page_title="AI Study Assistant")
 st.title("📚 Personal AI Study Assistant")
 
-st.header("📝 PDF Upload + Summarization")
-uploaded_pdf = st.file_uploader("Upload your study PDF", type=["pdf"])
+st.markdown("You can either **upload a PDF** or **ask a custom question**.")
 
-if uploaded_pdf:
-    with st.spinner("Reading your file..."):
-        pdf_text = extract_text_from_pdf(uploaded_pdf)
-        if len(pdf_text) > 15000:
-            st.warning("PDF is too long! Only summarizing first 15000 characters.")
-            pdf_text = pdf_text[:15000]
+option = st.radio("Choose your input type:", ("Ask a question", "Upload a PDF"))
 
-        prompt = f"Please summarize the following study material:\n\n{pdf_text}"
-        summary = ask_together_ai(prompt)
-        st.subheader("🧠 Summary")
-        st.success(summary)
+if option == "Ask a question":
+    user_query = st.text_input("❓ Enter your study question here:")
+    if st.button("Ask"):
+        if user_query:
+            with st.spinner("Thinking..."):
+                response = ask_together_ai(user_query)
+                st.subheader("🧠 AI Response")
+                st.success(response)
+        else:
+            st.warning("Please enter a question.")
+
+elif option == "Upload a PDF":
+    uploaded_pdf = st.file_uploader("📄 Upload your study PDF", type=["pdf"])
+    if uploaded_pdf:
+        with st.spinner("Reading and analyzing your file..."):
+            pdf_text = extract_text_from_pdf(uploaded_pdf)
+            if len(pdf_text) > 15000:
+                st.warning("PDF is too long! Only summarizing the first 15000 characters.")
+                pdf_text = pdf_text[:15000]
+
+            summary_prompt = f"Please summarize the following study material:\n\n{pdf_text}"
+            summary = ask_together_ai(summary_prompt)
+            st.subheader("🧠 Summary")
+            st.success(summary)
