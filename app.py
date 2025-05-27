@@ -1,17 +1,18 @@
 import streamlit as st
 import requests
-import fitz  # PyMuPDF
 
-# --- CONFIG ---
-st.set_page_config(page_title="AI Study Assistant", layout="centered")
+# --- PAGE CONFIG ---
+st.set_page_config(page_title="📚 AI Study Assistant", layout="centered")
+st.title("📚 Personal AI Study Assistant")
 
+# --- SETUP ---
 TOGETHER_API_KEY = st.secrets["TOGETHER_API_KEY"]
 
-# Initialize history
-if "history" not in st.session_state:
-    st.session_state.history = []
+# Init chat history
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
 
-# Function: Ask Together AI
+# Function to ask Together AI
 def ask_together_ai(prompt):
     url = "https://api.together.xyz/v1/chat/completions"
     headers = {
@@ -20,94 +21,38 @@ def ask_together_ai(prompt):
     }
     payload = {
         "model": "meta-llama/Llama-3-8b-chat-hf",
-        "messages": [
-            {"role": "system", "content": "You are a helpful AI study assistant."},
-            {"role": "user", "content": prompt}
-        ],
+        "messages": [{"role": "system", "content": "You are a helpful AI study assistant."}] +
+                   [{"role": "user", "content": m["user"]} if "user" in m else {"role": "assistant", "content": m["assistant"]}
+                    for m in st.session_state.chat_history] +
+                   [{"role": "user", "content": prompt}],
         "temperature": 0.7
     }
     response = requests.post(url, headers=headers, json=payload)
     response.raise_for_status()
     return response.json()["choices"][0]["message"]["content"]
 
-# Function: Extract PDF text
-def extract_text_from_pdf(uploaded_file):
-    doc = fitz.open(stream=uploaded_file.read(), filetype="pdf")
-    return "\n".join(page.get_text() for page in doc)
+# Show full chat history
+for msg in st.session_state.chat_history:
+    if "user" in msg:
+        with st.chat_message("user"):
+            st.markdown(msg["user"])
+    if "assistant" in msg:
+        with st.chat_message("assistant"):
+            st.markdown(msg["assistant"])
 
-# --- MAIN APP ---
-st.title("📚 Personal AI Study Assistant")
+# --- Chat Input ---
+user_prompt = st.chat_input("Ask me anything about your study material...")
 
-# Display full history (like a chat)
-for item in st.session_state.history:
-    if item["type"] == "Question":
-        st.markdown(f"**🧑 You asked:** {item['input']}")
-        st.markdown(f"**🤖 AI answered:** {item['output']}")
-    elif item["type"] == "PDF Summary":
-        st.markdown(f"**📄 You uploaded:** {item['input']}")
-        st.markdown(f"**📌 Summary:** {item['output']}")
-    st.divider()
+if user_prompt:
+    # Show user message
+    with st.chat_message("user"):
+        st.markdown(user_prompt)
+    st.session_state.chat_history.append({"user": user_prompt})
 
-# Show full history at the top
-st.subheader("📜 Interaction History")
-for item in st.session_state.history:
-    if item["type"] == "Question":
-        st.markdown(f"**🧑 You asked:** {item['input']}")
-        st.markdown(f"**🤖 AI answered:** {item['output']}")
-    elif item["type"] == "PDF Summary":
-        st.markdown(f"**📄 You uploaded:** {item['input']}")
-        st.markdown(f"**📌 Summary:** {item['output']}")
-    st.divider()
-
-# Tabs for question or PDF upload
-tab1, tab2 = st.tabs(["❓ Ask a Question", "📄 Upload a PDF"])
-
-# --- Question Tab ---
-with tab1:
-    if "user_input" not in st.session_state:
-        st.session_state.user_input = ""
-
-    # Create a form so we can clear the input after submit
-    with st.form("question_form", clear_on_submit=True):
-        user_query = st.text_input("Enter your question:", value=st.session_state.user_input, key="input_text")
-        submit_question = st.form_submit_button("Submit Question")
-
-    if submit_question:
-        if user_query.strip() != "":
-            with st.spinner("Thinking..."):
-                response = ask_together_ai(user_query)
-                st.session_state.history.append({
-                    "type": "Question",
-                    "input": user_query,
-                    "output": response
-                })
-
-                # Display latest response
-                st.markdown(f"**🧑 You asked:** {user_query}")
-                st.markdown(f"**🤖 AI answered:** {response}")
-                st.divider()
-
-                # Reset the input
-                st.session_state.user_input = ""
-        else:
-            st.warning("Please enter a question.")
-
-# --- PDF Tab ---
-with tab2:
-    uploaded_pdf = st.file_uploader("Upload your study PDF", type=["pdf"])
-    if uploaded_pdf and st.button("Summarize PDF"):
-        with st.spinner("Reading and summarizing..."):
-            pdf_text = extract_text_from_pdf(uploaded_pdf)
-            if len(pdf_text) > 15000:
-                pdf_text = pdf_text[:15000]
-                st.info("PDF too long. Summarizing the first 15000 characters.")
-            summary = ask_together_ai(f"Please summarize the following study material:\n\n{pdf_text}")
-            st.session_state.history.append({
-                "type": "PDF Summary",
-                "input": uploaded_pdf.name,
-                "output": summary
-            })
-            st.markdown(f"**📄 You uploaded:** {uploaded_pdf.name}")
-            st.markdown(f"**📌 Summary:** {summary}")
-            st.divider()
+    # Generate AI response
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking..."):
+            response = ask_together_ai(user_prompt)
+            st.markdown(response)
+    st.session_state.chat_history.append({"assistant": response})
 
