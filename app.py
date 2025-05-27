@@ -2,16 +2,16 @@ import streamlit as st
 import requests
 import fitz  # PyMuPDF
 
+# --- CONFIG ---
 st.set_page_config(page_title="AI Study Assistant", layout="centered")
 
-# Get API key from Streamlit secrets
 TOGETHER_API_KEY = st.secrets["TOGETHER_API_KEY"]
 
-# Initialize session state for history
+# Initialize history
 if "history" not in st.session_state:
     st.session_state.history = []
 
-# Function to ask Together AI
+# Function: Ask Together AI
 def ask_together_ai(prompt):
     url = "https://api.together.xyz/v1/chat/completions"
     headers = {
@@ -21,78 +21,65 @@ def ask_together_ai(prompt):
     payload = {
         "model": "meta-llama/Llama-3-8b-chat-hf",
         "messages": [
-            {"role": "system", "content": "You are a helpful AI study assistant. Help with summaries, explanations, quizzes, etc."},
+            {"role": "system", "content": "You are a helpful AI study assistant."},
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.7
     }
-
     response = requests.post(url, headers=headers, json=payload)
     response.raise_for_status()
     return response.json()["choices"][0]["message"]["content"]
 
-# Function to extract text from PDF
+# Function: Extract PDF text
 def extract_text_from_pdf(uploaded_file):
     doc = fitz.open(stream=uploaded_file.read(), filetype="pdf")
-    text = ""
-    for page in doc:
-        text += page.get_text()
-    return text
+    return "\n".join(page.get_text() for page in doc)
 
-# --- UI Starts Here ---
+# --- MAIN APP ---
 st.title("📚 Personal AI Study Assistant")
 
-# Sidebar: History
-st.sidebar.title("📜 Interaction History")
-if st.session_state.history:
-    for idx, entry in enumerate(reversed(st.session_state.history), 1):
-        st.sidebar.markdown(f"**{idx}. {entry['type']}**")
-        st.sidebar.markdown(f"- 🔹 Input: `{entry['input'][:50]}...`")
-        st.sidebar.markdown(f"- 🧠 Output: `{entry['output'][:60]}...`")
-        st.sidebar.markdown("---")
-else:
-    st.sidebar.info("No history yet.")
+# Display full history (like a chat)
+for item in st.session_state.history:
+    if item["type"] == "Question":
+        st.markdown(f"**🧑 You asked:** {item['input']}")
+        st.markdown(f"**🤖 AI answered:** {item['output']}")
+    elif item["type"] == "PDF Summary":
+        st.markdown(f"**📄 You uploaded:** {item['input']}")
+        st.markdown(f"**📌 Summary:** {item['output']}")
+    st.divider()
 
-# Main Selection
-st.markdown("Choose an action:")
-option = st.radio("Select input type:", ("Ask a question", "Upload a PDF"))
+# Tabs for question or PDF upload
+tab1, tab2 = st.tabs(["❓ Ask a Question", "📄 Upload a PDF"])
 
-# --- Ask a Question ---
-if option == "Ask a question":
-    user_query = st.text_input("❓ Enter your question:")
-    if st.button("Ask"):
-        if user_query.strip():
+# --- Question Tab ---
+with tab1:
+    user_query = st.text_input("Enter your question:")
+    if st.button("Submit Question"):
+        if user_query.strip() != "":
             with st.spinner("Thinking..."):
                 response = ask_together_ai(user_query)
-                st.subheader("🧠 AI Response")
-                st.success(response)
-
                 st.session_state.history.append({
                     "type": "Question",
                     "input": user_query,
                     "output": response
                 })
+                st.experimental_rerun()
         else:
             st.warning("Please enter a question.")
 
-# --- Upload a PDF ---
-elif option == "Upload a PDF":
-    uploaded_pdf = st.file_uploader("📄 Upload a PDF", type=["pdf"])
-    if uploaded_pdf:
-        if st.button("Summarize PDF"):
-            with st.spinner("Reading PDF..."):
-                pdf_text = extract_text_from_pdf(uploaded_pdf)
-                if len(pdf_text) > 15000:
-                    pdf_text = pdf_text[:15000]
-                    st.warning("PDF is too long, summarizing first 15000 characters.")
-
-                summary_prompt = f"Summarize this study material:\n\n{pdf_text}"
-                summary = ask_together_ai(summary_prompt)
-                st.subheader("🧠 Summary")
-                st.success(summary)
-
-                st.session_state.history.append({
-                    "type": "PDF Summary",
-                    "input": uploaded_pdf.name,
-                    "output": summary
-                })
+# --- PDF Tab ---
+with tab2:
+    uploaded_pdf = st.file_uploader("Upload your study PDF", type=["pdf"])
+    if uploaded_pdf and st.button("Summarize PDF"):
+        with st.spinner("Reading and summarizing..."):
+            pdf_text = extract_text_from_pdf(uploaded_pdf)
+            if len(pdf_text) > 15000:
+                pdf_text = pdf_text[:15000]
+                st.info("PDF too long. Summarizing the first 15000 characters.")
+            summary = ask_together_ai(f"Please summarize the following study material:\n\n{pdf_text}")
+            st.session_state.history.append({
+                "type": "PDF Summary",
+                "input": uploaded_pdf.name,
+                "output": summary
+            })
+            st.experimental_rerun()
