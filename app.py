@@ -63,7 +63,10 @@ with tab1:
                     "input": user_query,
                     "output": response
                 })
-                st.experimental_rerun()
+                st.markdown(f"**🧑 You asked:** {user_query}")
+                st.markdown(f"**🤖 AI answered:** {response}")
+                st.divider()
+
         else:
             st.warning("Please enter a question.")
 
@@ -82,4 +85,7 @@ with tab2:
                 "input": uploaded_pdf.name,
                 "output": summary
             })
-            st.experimental_rerun()
+            st.markdown(f"**📄 You uploaded:** {uploaded_pdf.name}")
+            st.markdown(f"**📌 Summary:** {summary}")
+            st.divider()
+
