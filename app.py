@@ -63,6 +63,9 @@ from io import BytesIO
 from fpdf import FPDF
 from io import BytesIO
 
+from fpdf import FPDF
+from io import BytesIO
+
 def generate_pdf(chat_history):
     pdf = FPDF()
     pdf.add_page()
@@ -81,10 +84,9 @@ def generate_pdf(chat_history):
             pdf.multi_cell(0, 10, f"AI: {msg['assistant']}")
         pdf.ln(5)
 
-    # Correct way to save to buffer for Streamlit download
-    pdf_buffer = BytesIO()
-    pdf.output(pdf_buffer, dest='F')
-    pdf_buffer.seek(0)
+    # Generate PDF string and write to BytesIO
+    pdf_output = pdf.output(dest='S').encode('latin1')  # 'S' returns string, encode it
+    pdf_buffer = BytesIO(pdf_output)
     return pdf_buffer
 
 # Download button
