@@ -81,7 +81,7 @@ def generate_pdf(chat_history):
 
     # Save PDF to memory
     pdf_buffer = BytesIO()
-    pdf.output(pdf_buffer)
+    pdf.output(pdf_buffer, 'S')
     pdf_buffer.seek(0)
     return pdf_buffer
 
