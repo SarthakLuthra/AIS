@@ -66,14 +66,17 @@ from io import BytesIO
 from fpdf import FPDF
 from io import BytesIO
 
+from fpdf import FPDF
+from io import BytesIO
+
 def generate_pdf(chat_history):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.set_font("Arial", size=12)
 
-    pdf.set_title("AI Study Assistant Chat History")
-    pdf.set_author("Sarthak's Study Assistant")
+    # Add Unicode-support font
+    pdf.add_font("DejaVu", "", "DejaVuSans.ttf", uni=True)
+    pdf.set_font("DejaVu", size=12)
 
     for msg in chat_history:
         if "user" in msg:
@@ -84,10 +87,10 @@ def generate_pdf(chat_history):
             pdf.multi_cell(0, 10, f"AI: {msg['assistant']}")
         pdf.ln(5)
 
-    # Generate PDF string and write to BytesIO
-    pdf_output = pdf.output(dest='S').encode('latin1')  # 'S' returns string, encode it
-    pdf_buffer = BytesIO(pdf_output)
-    return pdf_buffer
+    pdf_bytes = BytesIO()
+    pdf.output(pdf_bytes)
+    pdf_bytes.seek(0)
+    return pdf_bytes
 
 # Download button
 if st.session_state.chat_history:
