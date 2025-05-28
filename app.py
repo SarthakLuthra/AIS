@@ -60,7 +60,9 @@ if user_prompt:
     from fpdf import FPDF
 from io import BytesIO
 
-# Function to generate PDF
+from fpdf import FPDF
+from io import BytesIO
+
 def generate_pdf(chat_history):
     pdf = FPDF()
     pdf.add_page()
@@ -79,9 +81,9 @@ def generate_pdf(chat_history):
             pdf.multi_cell(0, 10, f"AI: {msg['assistant']}")
         pdf.ln(5)
 
-    # Save PDF to memory
+    # Correct way to save to buffer for Streamlit download
     pdf_buffer = BytesIO()
-    pdf.output(pdf_buffer, 'S')
+    pdf.output(pdf_buffer, dest='F')
     pdf_buffer.seek(0)
     return pdf_buffer
 
