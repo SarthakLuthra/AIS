@@ -1,4 +1,5 @@
 streamlit
 requests
 PyMuPDF
-fpdf
+fpdf==1.7.2
+
