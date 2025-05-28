@@ -55,4 +55,44 @@ if user_prompt:
             response = ask_together_ai(user_prompt)
             st.markdown(response)
     st.session_state.chat_history.append({"assistant": response})
+    from fpdf import FPDF
+from io import BytesIO
+
+# Function to generate PDF
+def generate_pdf(chat_history):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.set_font("Arial", size=12)
+
+    pdf.set_title("AI Study Assistant Chat History")
+    pdf.set_author("Sarthak's Study Assistant")
+
+    for msg in chat_history:
+        if "user" in msg:
+            pdf.set_text_color(0, 0, 255)
+            pdf.multi_cell(0, 10, f"User: {msg['user']}")
+        if "assistant" in msg:
+            pdf.set_text_color(0, 100, 0)
+            pdf.multi_cell(0, 10, f"AI: {msg['assistant']}")
+        pdf.ln(5)
+
+    # Save PDF to memory
+    pdf_buffer = BytesIO()
+    pdf.output(pdf_buffer)
+    pdf_buffer.seek(0)
+    return pdf_buffer
+
+# Download button
+if st.session_state.chat_history:
+    st.markdown("---")
+    if st.button("📥 Download Chat as PDF"):
+        pdf_bytes = generate_pdf(st.session_state.chat_history)
+        st.download_button(
+            label="Click here to download",
+            data=pdf_bytes,
+            file_name="chat_history.pdf",
+            mime="application/pdf"
+        )
+
 
