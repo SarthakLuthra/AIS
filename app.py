@@ -1,5 +1,7 @@
 import streamlit as st
 import requests
+from fpdf import FPDF
+from io import BytesIO
 
 # --- PAGE CONFIG ---
 st.set_page_config(page_title="📚 AI Study Assistant", layout="centered")
