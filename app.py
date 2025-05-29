@@ -61,8 +61,6 @@ if user_prompt:
     st.session_state.chat_history.append({"assistant": response})
     
 
-from io import BytesIO
-
 def generate_pdf(chat_history):
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
@@ -70,8 +68,15 @@ def generate_pdf(chat_history):
     textobject.setFont("Helvetica", 12)
 
     for entry in chat_history:
-        sender = entry["role"].capitalize()
-        message = entry["content"]
+        if "user" in entry:
+            sender = "User"
+            message = entry["user"]
+        elif "assistant" in entry:
+            sender = "Assistant"
+            message = entry["assistant"]
+        else:
+            continue  # Skip if entry is malformed
+
         for line in message.splitlines():
             textobject.textLine(f"{sender}: {line}")
         textobject.textLine("")  # Space between messages
@@ -80,6 +85,7 @@ def generate_pdf(chat_history):
     c.save()
     buffer.seek(0)
     return buffer
+
 # Download button
 if st.session_state.chat_history:
     st.markdown("---")
