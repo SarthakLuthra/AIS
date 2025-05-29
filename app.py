@@ -61,11 +61,17 @@ if user_prompt:
     st.session_state.chat_history.append({"assistant": response})
     
 
+import textwrap
+from reportlab.lib.pagesizes import A4
+
 def generate_pdf(chat_history):
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
-    textobject = c.beginText(40, 800)  # Start near top of page
+    width, height = A4
+    textobject = c.beginText(40, height - 40)  # Start near top of page with margin
     textobject.setFont("Helvetica", 12)
+
+    max_width = 100  # Adjust this as needed for page width (characters per line)
 
     for entry in chat_history:
         if "user" in entry:
@@ -77,17 +83,31 @@ def generate_pdf(chat_history):
         else:
             continue
 
-        # Write sender once
+        # Write sender
         textobject.textLine(f"{sender}:")
-        # Write message lines indented
+        # Wrap message lines and indent them
+        wrapped_lines = []
         for line in message.splitlines():
-            textobject.textLine(f"    {line}")
-        textobject.textLine("")  # Blank line between messages
+            wrapped = textwrap.wrap(line, width=max_width)
+            for wline in wrapped:
+                wrapped_lines.append(f"    {wline}")
+        for wline in wrapped_lines:
+            textobject.textLine(wline)
+
+        textobject.textLine("")  # Add a blank line between messages
+
+        # Check for page overflow
+        if textobject.getY() < 40:
+            c.drawText(textobject)
+            c.showPage()
+            textobject = c.beginText(40, height - 40)
+            textobject.setFont("Helvetica", 12)
 
     c.drawText(textobject)
     c.save()
     buffer.seek(0)
     return buffer
+
 
 
 # Download button
