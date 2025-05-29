@@ -1,6 +1,8 @@
 import streamlit as st
 import requests
-from fpdf import FPDF
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+import io
 from io import BytesIO
 
 # --- PAGE CONFIG ---
@@ -57,41 +59,27 @@ if user_prompt:
             response = ask_together_ai(user_prompt)
             st.markdown(response)
     st.session_state.chat_history.append({"assistant": response})
-    from fpdf import FPDF
-from io import BytesIO
+    
 
-from fpdf import FPDF
-from io import BytesIO
-
-from fpdf import FPDF
-from io import BytesIO
-
-from fpdf import FPDF
 from io import BytesIO
 
 def generate_pdf(chat_history):
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=15)
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    textobject = c.beginText(40, 800)  # Start near top of page
+    textobject.setFont("Helvetica", 12)
 
-    # Add Unicode-support font
-    pdf.add_font("DejaVu", "", "DejaVuSans.ttf", uni=True)
-    pdf.set_font("DejaVu", size=12)
+    for entry in chat_history:
+        sender = entry["role"].capitalize()
+        message = entry["content"]
+        for line in message.splitlines():
+            textobject.textLine(f"{sender}: {line}")
+        textobject.textLine("")  # Space between messages
 
-    for msg in chat_history:
-        if "user" in msg:
-            pdf.set_text_color(0, 0, 255)
-            pdf.multi_cell(0, 10, f"User: {msg['user']}")
-        if "assistant" in msg:
-            pdf.set_text_color(0, 100, 0)
-            pdf.multi_cell(0, 10, f"AI: {msg['assistant']}")
-        pdf.ln(5)
-
-    pdf_bytes = BytesIO()
-    pdf.output(pdf_bytes)
-    pdf_bytes.seek(0)
-    return pdf_bytes
-
+    c.drawText(textobject)
+    c.save()
+    buffer.seek(0)
+    return buffer
 # Download button
 if st.session_state.chat_history:
     st.markdown("---")
