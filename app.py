@@ -75,16 +75,20 @@ def generate_pdf(chat_history):
             sender = "Assistant"
             message = entry["assistant"]
         else:
-            continue  # Skip if entry is malformed
+            continue
 
+        # Write sender once
+        textobject.textLine(f"{sender}:")
+        # Write message lines indented
         for line in message.splitlines():
-            textobject.textLine(f"{sender}: {line}")
-        textobject.textLine("")  # Space between messages
+            textobject.textLine(f"    {line}")
+        textobject.textLine("")  # Blank line between messages
 
     c.drawText(textobject)
     c.save()
     buffer.seek(0)
     return buffer
+
 
 # Download button
 if st.session_state.chat_history:
